@@ -28,7 +28,7 @@ def get_yolox_datadir():
         yolox_datadir = os.path.join(yolox_path, "datasets")
     return yolox_datadir
 
-
+ 
 class DataLoader(torchDataLoader):
     """
     Lightnet dataloader that enables on the fly resizing of the images.
@@ -41,12 +41,12 @@ class DataLoader(torchDataLoader):
         super().__init__(*args, **kwargs)
         self.__initialized = False
         shuffle = False
-        batch_sampler = None
+        batch_sampler = None 
         if len(args) > 5:
             shuffle = args[2]
             sampler = args[3]
             batch_sampler = args[4]
-        elif len(args) > 4:
+        elif len(args) > 4: 
             shuffle = args[2]
             sampler = args[3]
             if "batch_sampler" in kwargs:
@@ -57,7 +57,7 @@ class DataLoader(torchDataLoader):
                 sampler = kwargs["sampler"]
             if "batch_sampler" in kwargs:
                 batch_sampler = kwargs["batch_sampler"]
-        else:
+        else: #len(args) = 1
             if "shuffle" in kwargs:
                 shuffle = kwargs["shuffle"]
             if "sampler" in kwargs:
@@ -67,7 +67,7 @@ class DataLoader(torchDataLoader):
 
         # Use custom BatchSampler
         if batch_sampler is None:
-            if sampler is None:
+            if sampler is None: # is none
                 if shuffle:
                     sampler = torch.utils.data.sampler.RandomSampler(self.dataset)
                     # sampler = torch.utils.data.DistributedSampler(self.dataset)

@@ -52,7 +52,7 @@ This repo is an implementation of PyTorch version YOLOX, there is also a [MegEng
 
 |Model |size |mAP<sup>val<br>0.5:0.95 | Params<br>(M) |FLOPs<br>(G)| weights |
 | ------        |:---:  |  :---:       |:---:     |:---:  | :---: |
-|[YOLOX-Nano](./exps/default/yolox_nano.py) |416  |25.8  | 0.91 |1.08 | [github](https://github.com/Megvii-BaseDetection/YOLOX/releases/download/0.1.1rc0/yolox_nano.pth) |
+|[YOLOX-Nano](./exps/default/nano.py) |416  |25.8  | 0.91 |1.08 | [github](https://github.com/Megvii-BaseDetection/YOLOX/releases/download/0.1.1rc0/yolox_nano.pth) |
 |[YOLOX-Tiny](./exps/default/yolox_tiny.py) |416  |32.8 | 5.06 |6.45 | [github](https://github.com/Megvii-BaseDetection/YOLOX/releases/download/0.1.1rc0/yolox_tiny.pth) |
 
 
@@ -61,7 +61,7 @@ This repo is an implementation of PyTorch version YOLOX, there is also a [MegEng
 
 |Model |size |mAP<sup>val<br>0.5:0.95 | Params<br>(M) |FLOPs<br>(G)| weights |
 | ------        |:---:  |  :---:       |:---:     |:---:  | :---: |
-|[YOLOX-Nano](./exps/default/yolox_nano.py) |416  |25.3  | 0.91 |1.08 | [github](https://github.com/Megvii-BaseDetection/storage/releases/download/0.0.1/yolox_nano.pth) |
+|[YOLOX-Nano](./exps/default/nano.py) |416  |25.3  | 0.91 |1.08 | [github](https://github.com/Megvii-BaseDetection/storage/releases/download/0.0.1/yolox_nano.pth) |
 |[YOLOX-Tiny](./exps/default/yolox_tiny.py) |416  |32.8 | 5.06 |6.45 | [github](https://github.com/Megvii-BaseDetection/storage/releases/download/0.0.1/yolox_tiny_32dot8.pth) |
 
 </details>
@@ -210,16 +210,15 @@ python -m yolox.tools.eval -n  yolox-s -c yolox_s.pth -b 1 -d 1 --conf 0.001 --f
 ## Deployment
 
 
-1. [MegEngine in C++ and Python](./demo/MegEngine)
-2. [ONNX export and an ONNXRuntime](./demo/ONNXRuntime)
-3. [TensorRT in C++ and Python](./demo/TensorRT)
-4. [ncnn in C++ and Java](./demo/ncnn)
-5. [OpenVINO in C++ and Python](./demo/OpenVINO)
-6. [Accelerate YOLOX inference with nebullvm in Python](./demo/nebullvm)
+1.  [MegEngine in C++ and Python](./demo/MegEngine)
+2.  [ONNX export and an ONNXRuntime](./demo/ONNXRuntime)
+3.  [TensorRT in C++ and Python](./demo/TensorRT)
+4.  [ncnn in C++ and Java](./demo/ncnn)
+5.  [OpenVINO in C++ and Python](./demo/OpenVINO)
+
 
 ## Third-party resources
 * YOLOX for streaming perception: [StreamYOLO (CVPR 2022 Oral)](https://github.com/yancie-yjr/StreamYOLO)
-* The YOLOX-s and YOLOX-nano are Integrated into [ModelScope](https://www.modelscope.cn/home). Try out the Online Demo at [YOLOX-s](https://www.modelscope.cn/models/damo/cv_cspnet_image-object-detection_yolox/summary) and [YOLOX-Nano](https://www.modelscope.cn/models/damo/cv_cspnet_image-object-detection_yolox_nano_coco/summary) respectively 🚀.
 * Integrated into [Huggingface Spaces 🤗](https://huggingface.co/spaces) using [Gradio](https://github.com/gradio-app/gradio). Try out the Web Demo: [![Hugging Face Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-blue)](https://huggingface.co/spaces/Sultannn/YOLOX-Demo)
 * The ncnn android app with video support: [ncnn-android-yolox](https://github.com/FeiGeChuanShu/ncnn-android-yolox) from [FeiGeChuanShu](https://github.com/FeiGeChuanShu)
 * YOLOX with Tengine support: [Tengine](https://github.com/OAID/Tengine/blob/tengine-lite/examples/tm_yolox.cpp) from [BUG1989](https://github.com/BUG1989)

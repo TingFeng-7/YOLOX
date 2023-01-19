@@ -19,6 +19,7 @@ from yolox.utils import xyxy2cxcywh
 
 
 def augment_hsv(img, hgain=5, sgain=30, vgain=30):
+    #"它是什么颜色(H)?"，"颜色深不深(S)?"，"亮不亮(V)?"，这其实就是在表述hsv颜色空间
     hsv_augs = np.random.uniform(-1, 1, 3) * [hgain, sgain, vgain]  # random gains
     hsv_augs *= np.random.randint(0, 2, 3)  # random selection of h, s, v
     hsv_augs = hsv_augs.astype(np.int16)
@@ -134,12 +135,12 @@ def random_affine(
 def _mirror(image, boxes, prob=0.5):
     _, width, _ = image.shape
     if random.random() < prob:
-        image = image[:, ::-1]
+        image = image[:, ::-1] 
         boxes[:, 0::2] = width - boxes[:, 2::-2]
     return image, boxes
 
 
-def preproc(img, input_size, swap=(2, 0, 1)):
+def preproc(img, input_size, swap=(2, 0, 1)): 
     if len(img.shape) == 3:
         padded_img = np.ones((input_size[0], input_size[1], 3), dtype=np.uint8) * 114
     else:
@@ -157,10 +158,11 @@ def preproc(img, input_size, swap=(2, 0, 1)):
     padded_img = np.ascontiguousarray(padded_img, dtype=np.float32)
     return padded_img, r
 
-
 class TrainTransform:
     def __init__(self, max_labels=50, flip_prob=0.5, hsv_prob=1.0):
-        self.max_labels = max_labels
+        #tianxin 
+        self.max_labels = 1000
+        #tianxin
         self.flip_prob = flip_prob
         self.hsv_prob = hsv_prob
 
@@ -210,10 +212,151 @@ class TrainTransform:
         return image_t, padded_labels
 
 
+# new resize strategy
+
+class TrainTransform_32scaled:
+    def __init__(self, max_labels=50, flip_prob=0.5, hsv_prob=1.0):
+        #tianxin 
+        self.max_labels = 1000 
+        #tianxin
+        self.flip_prob = flip_prob
+        self.hsv_prob = hsv_prob
+
+    def __call__(self, image, targets, input_dim):
+        boxes = targets[:, :4].copy()
+        labels = targets[:, 4].copy()
+        if len(boxes) == 0:
+            targets = np.zeros((self.max_labels, 5), dtype=np.float32)
+            image, ratio_w_o,ratio_h_o = preproc_32scaled(image, input_dim) #tianxin change
+            return image, targets
+
+        image_o = image.copy()
+        targets_o = targets.copy()
+        height_o, width_o, _ = image_o.shape
+        boxes_o = targets_o[:, :4]
+        labels_o = targets_o[:, 4]
+        # bbox_o: [xyxy] to [c_x,c_y,w,h]
+        boxes_o = xyxy2cxcywh(boxes_o)
+
+        if random.random() < self.hsv_prob:
+            augment_hsv(image)
+        image_t, boxes = _mirror(image, boxes, self.flip_prob)
+        height, width, _ = image_t.shape
+
+        #tianxin change start
+        image_t, ratio_w_ ,ratio_h_ = preproc_32scaled(image_t, input_dim)
+        # boxes = xyxy2cxcywh(boxes)
+        # boxes *= r_ 
+        boxes = xyxy2cxcywh(boxes)
+        boxes[:,0] = boxes[:,0] * ratio_w_
+        boxes[:,1] = boxes[:,1] * ratio_h_
+        boxes[:,2] = boxes[:,2] * ratio_w_
+        boxes[:,3] = boxes[:,3] * ratio_h_
+        
+        
+        mask_b = np.minimum(boxes[:, 2], boxes[:, 3]) > 1 #筛除高或宽小于1的box
+        boxes_t = boxes[mask_b]
+        labels_t = labels[mask_b]
+
+        if len(boxes_t) == 0:
+            image_t, ratio_w_o,ratio_h_o = preproc_32scaled(image_o, input_dim)
+            # boxes_o *= r_o 
+            boxes_o[:,0] = boxes_o[:,0] * ratio_w_o
+            boxes_o[:,1] = boxes_o[:,1] * ratio_h_o
+            boxes_o[:,2] = boxes_o[:,2] * ratio_w_o
+            boxes_o[:,3] = boxes_o[:,3] * ratio_h_o  
+            boxes_t = boxes_o
+            labels_t = labels_o
+
+        #tianxin change end
+
+        labels_t = np.expand_dims(labels_t, 1)
+
+        targets_t = np.hstack((labels_t, boxes_t))
+        padded_labels = np.zeros((self.max_labels, 5))
+        padded_labels[range(len(targets_t))[: self.max_labels]] = targets_t[
+            : self.max_labels
+        ]
+        padded_labels = np.ascontiguousarray(padded_labels, dtype=np.float32)
+        return image_t, padded_labels
+def preproc_32scaled(img, input_size, swap=(2, 0, 1)):
+
+        ori_w,ori_h = img.shape[1],img.shape[0]
+        dst_w = max(32,min(input_size[1],math.ceil(img.shape[1]/32)*32))
+        dst_h = max(32,min(input_size[0],math.ceil(img.shape[0]/32)*32))
+        ratio_w = img.shape[1]/dst_w
+        ratio_h = img.shape[0]/dst_h
+        new_h = 0
+        new_w = 0 
+        if ratio_w > 1 or ratio_h > 1:
+            # exit()
+            if ratio_w > ratio_h:
+                new_w = int(img.shape[1]/ratio_w)
+                new_h = int(img.shape[0]/ratio_w)
+            else:
+                new_w = int(img.shape[1]/ratio_h)
+                new_h = int(img.shape[0]/ratio_h)
+            img = cv2.resize(img, (new_w,new_h),interpolation=cv2.INTER_LINEAR)
+            img = cv2.copyMakeBorder(img, 0, input_size[0]-new_h, 0, input_size[1]-new_w, cv2.BORDER_CONSTANT, value=0).astype(np.uint8) #dyn
+        else:
+            new_w = img.shape[1]
+            new_h = img.shape[0]
+            img = cv2.copyMakeBorder(img, 0, input_size[0]-new_h, 0, input_size[1]-new_w, cv2.BORDER_CONSTANT, value=0).astype(np.uint8) #dyn
+        
+        ratio_w = new_w/ori_w
+        ratio_h = new_h/ori_h
+        # print("*"*100)
+        # print(f'ori img shape: {ori_h} and {ori_w}')
+        # print(f"new img size:{img.shape}")
+        # print("*"*100)
+
+        padded_img = img.transpose(swap)
+        padded_img = np.ascontiguousarray(padded_img, dtype=np.float32)
+        return padded_img, ratio_w ,ratio_h
+
+        # polys = polys.astype(float)
+        # polys[:,0::2] = np.round(polys[:,0::2]*w_scaled_ratio) #改变标注框w的值
+        # polys[:,1::2] = np.round(polys[:,1::2]*h_scaled_ratio) #改变标注框h的值
+        # polys = polys.astype(int)
+
+
 class ValTransform:
     """
     Defines the transformations that should be applied to test PIL image
-    for input into the network
+    for input into the network 
+
+    dimension -> tensorize -> color adj
+
+    Arguments:
+        resize (int): input dimension to SSD
+        rgb_means ((int,int,int)): average RGB of the dataset
+            (104,117,123)
+        swap ((int,int,int)): final order of channels
+
+    Returns:
+        transform (transform) : callable transform to be applied to test/val
+        data
+    """
+
+    def __init__(self, swap=(2, 0, 1), legacy=False):
+        self.swap = swap
+        self.legacy = legacy
+
+    # assume input is cv2 img for now
+    def __call__(self, img, res, input_size): 
+        img, _ = preproc(img, input_size, self.swap)
+        if self.legacy:
+            img = img[::-1, :, :].copy()
+            img /= 255.0
+            img -= np.array([0.485, 0.456, 0.406]).reshape(3, 1, 1)
+            img /= np.array([0.229, 0.224, 0.225]).reshape(3, 1, 1)
+        return img, np.zeros((1, 5))
+
+
+class ValTransform_32scaled:
+    """
+    Defines the transformations that should be applied to test PIL image
+    for input into the network 
 
     dimension -> tensorize -> color adj
 
@@ -234,7 +377,7 @@ class ValTransform:
 
     # assume input is cv2 img for now
     def __call__(self, img, res, input_size):
-        img, _ = preproc(img, input_size, self.swap)
+        img, _,_ = preproc_32scaled(img, input_size, self.swap)
         if self.legacy:
             img = img[::-1, :, :].copy()
             img /= 255.0

@@ -26,7 +26,7 @@ class YOLOX(nn.Module):
         self.head = head
 
     def forward(self, x, targets=None):
-        # fpn output content features of [dark3, dark4, dark5]
+        # fpn output content features of [dark3, dark4, dark5],现在增加dark2
         fpn_outs = self.backbone(x)
 
         if self.training:

@@ -26,9 +26,8 @@ from yolox.utils import (
     gpu_mem_usage,
     is_parallel,
     load_ckpt,
-    mem_usage,
     occupy_mem,
-    save_checkpoint,
+    save_checkpoint, 
     setup_logger,
     synchronize
 )
@@ -95,7 +94,7 @@ class Trainer:
     def train_one_iter(self):
         iter_start_time = time.time()
 
-        inps, targets = self.prefetcher.next()
+        inps, targets = self.prefetcher.next() #inps: [8,3,1088,1920]
         inps = inps.to(self.data_type)
         targets = targets.to(self.data_type)
         targets.requires_grad = False
@@ -153,6 +152,7 @@ class Trainer:
             no_aug=self.no_aug,
             cache_img=self.args.cache,
         )
+ 
         logger.info("init prefetcher, this might take one minute or less...")
         self.prefetcher = DataPrefetcher(self.train_loader)
         # max_iter means iters per epoch
@@ -176,6 +176,8 @@ class Trainer:
         self.evaluator = self.exp.get_evaluator(
             batch_size=self.args.batch_size, is_distributed=self.is_distributed
         )
+        self.evaluator.per_class_AP = True
+        self.evaluator.per_class_AR = True
         # Tensorboard and Wandb loggers
         if self.rank == 0:
             if self.args.logger == "tensorboard":
@@ -211,9 +213,11 @@ class Trainer:
                 self.model.module.head.use_l1 = True
             else:
                 self.model.head.use_l1 = True
-            self.exp.eval_interval = 1
+            # self.exp.eval_interval = 1
             if not self.no_aug:
                 self.save_ckpt(ckpt_name="last_mosaic_epoch")
+        else:
+            pass
 
     def after_epoch(self):
         self.save_ckpt(ckpt_name="latest")
@@ -251,12 +255,10 @@ class Trainer:
                 ["{}: {:.3f}s".format(k, v.avg) for k, v in time_meter.items()]
             )
 
-            mem_str = "gpu mem: {:.0f}Mb, mem: {:.1f}Gb".format(gpu_mem_usage(), mem_usage())
-
             logger.info(
-                "{}, {}, {}, {}, lr: {:.3e}".format(
+                "{}, mem: {:.0f}Mb, {}, {}, lr: {:.3e}".format(
                     progress_str,
-                    mem_str,
+                    gpu_mem_usage(),
                     time_str,
                     loss_str,
                     self.meter["lr"].latest,
@@ -274,11 +276,13 @@ class Trainer:
 
             self.meter.clear_meters()
 
-        # random resizing
-        if (self.progress_in_iter + 1) % 10 == 0:
-            self.input_size = self.exp.random_resize(
-                self.train_loader, self.epoch, self.rank, self.is_distributed
-            )
+
+        #tianxin delete
+        # # random resizing
+        # if (self.progress_in_iter + 1) % 10 == 0:
+        #     self.input_size = self.exp.random_resize(
+        #         self.train_loader, self.epoch, self.rank, self.is_distributed
+        #     )
 
     @property
     def progress_in_iter(self):
@@ -325,15 +329,16 @@ class Trainer:
         else:
             evalmodel = self.model
             if is_parallel(evalmodel):
-                evalmodel = evalmodel.module
+                evalmodel = evalmodel.module 
 
         with adjust_status(evalmodel, training=False):
             (ap50_95, ap50, summary), predictions = self.exp.eval(
                 evalmodel, self.evaluator, self.is_distributed, return_outputs=True
             )
 
-        update_best_ckpt = ap50_95 > self.best_ap
-        self.best_ap = max(self.best_ap, ap50_95)
+        #tianxin: 改用ap50算best
+        update_best_ckpt = ap50 > self.best_ap
+        self.best_ap = max(self.best_ap, ap50)
 
         if self.rank == 0:
             if self.args.logger == "tensorboard":
@@ -349,9 +354,9 @@ class Trainer:
             logger.info("\n" + summary)
         synchronize()
 
-        self.save_ckpt("last_epoch", update_best_ckpt, ap=ap50_95)
+        self.save_ckpt("last_epoch", update_best_ckpt, ap=ap50)
         if self.save_history_ckpt:
-            self.save_ckpt(f"epoch_{self.epoch + 1}", ap=ap50_95)
+            self.save_ckpt(f"epoch_{self.epoch + 1}", ap=ap50)
 
     def save_ckpt(self, ckpt_name, update_best_ckpt=False, ap=None):
         if self.rank == 0:
@@ -383,3 +388,18 @@ class Trainer:
                         "curr_ap": ap
                     }
                 )
+
+
+#nvidia-docker run -it -e NVIDIA_VISIBLE_DEVICES=2 -v /workspace:/workspace -v /data:/data --shm-size="32g" -w /workspace yolox_single:latest bash
+#python tools/train.py -f exps/test03_v1.5_iou0.85/config.py -b 8 -d 1 --fp16 -o -c models/yolox_nano.pth
+#CUDA_VISIBLE_DEVICES=4,5,6,7 python tools/train.py -f .py -b 32 -d 4 --fp16 -o -c models/yolox_nano.pth
+
+
+#python tools/train.py -f 实验文件.py -b 8 -d 1 --fp16 -o -c models/yolox_nano.pth
+
+#nvidia-docker run -it -e NVIDIA_VISIBLE_DEVICES=all -v /workspace:/workspace -v /data:/data --shm-size="32g" -w /workspace yolox_single:latest bash
+#pip uninstall yolox
+#pip install -v -e .
+
+
+#先要开个all卡的docker，用一张卡训练，将cpu利用率激活；之后再用指定单卡docker，依次训练

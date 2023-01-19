@@ -21,14 +21,14 @@ class DataPrefetcher:
         self.preload()
 
     def preload(self):
-        try:
+        try: 
             self.next_input, self.next_target, _, _ = next(self.loader)
         except StopIteration:
             self.next_input = None
             self.next_target = None
             return
 
-        with torch.cuda.stream(self.stream):
+        with torch.cuda.stream(self.stream): 
             self.input_cuda()
             self.next_target = self.next_target.cuda(non_blocking=True)
 

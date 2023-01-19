@@ -94,19 +94,24 @@ def main():
         args.output_name,
         input_names=[args.input],
         output_names=[args.output],
-        dynamic_axes={args.input: {0: 'batch'},
-                      args.output: {0: 'batch'}} if args.dynamic else None,
+        dynamic_axes={args.input: {0: 'batch', 2: 'h', 3: 'w'},
+                      args.output: {0: 'batch', 2: 'h', 3: 'w'}} if args.dynamic else None,
         opset_version=args.opset,
     )
     logger.info("generated onnx model named {}".format(args.output_name))
 
     if not args.no_onnxsim:
         import onnx
+
         from onnxsim import simplify
 
-        # use onnx-simplifier to reduce reduent model.
+        input_shapes = {args.input: list(dummy_input.shape)} if args.dynamic else None
+
+        # use onnxsimplify to reduce reduent model.
         onnx_model = onnx.load(args.output_name)
-        model_simp, check = simplify(onnx_model)
+        model_simp, check = simplify(onnx_model,
+                                     dynamic_input_shape=args.dynamic,
+                                     input_shapes=input_shapes)
         assert check, "Simplified ONNX model could not be validated"
         onnx.save(model_simp, args.output_name)
         logger.info("generated simplified onnx model named {}".format(args.output_name))

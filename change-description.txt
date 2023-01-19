@@ -1,0 +1,6 @@
+yolox.core.trainer：339行 改用ap50评估和保存最佳模型
+yolox.core.trainer：280行 删除了一个随机的resize
+yolox.data.data_augment:   新增带有_32scaled后缀的类和方法，前处理方式修改，以及trainTransform里的maxLabel默认值
+
+yolox.exp.exp_base ： 增加了 32scaled变量控制使用哪种前处理（原始和新增）
+yolox.evaluator.coco_evaluator: 299  修改了coco计算ap的最大检测数

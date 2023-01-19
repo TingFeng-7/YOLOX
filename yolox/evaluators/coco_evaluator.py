@@ -93,7 +93,7 @@ class COCOEvaluator:
         per_class_AP: bool = False,
         per_class_AR: bool = False,
     ):
-        """
+        """ 
         Args:
             dataloader (Dataloader): evaluate dataloader.
             img_size: image size after preprocess. images are resized
@@ -295,6 +295,9 @@ class COCOEvaluator:
                 logger.warning("Use standard COCOeval.")
 
             cocoEval = COCOeval(cocoGt, cocoDt, annType[1])
+            #tianxin add
+            cocoEval.params.maxDets = [300,500,1000] 
+            #tianxin end
             cocoEval.evaluate()
             cocoEval.accumulate()
             redirect_string = io.StringIO()

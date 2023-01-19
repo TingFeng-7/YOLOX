@@ -1,0 +1,1 @@
+python /workspace/bohuang/git_res/YOLOX/tools/eval.py -f exp.py -c YOLOX_outputs/exp/last_epoch_ckpt.pth -b 8 -d 1 --conf 0.001 --fp16 --fuse
