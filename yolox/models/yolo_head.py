@@ -15,7 +15,7 @@ from .losses import IOUloss
 from .network_blocks import BaseConv, DWConv
 
 # add
-def isNAN_inTensor(matrix):
+def isNan_inTensor(matrix):
     assert not torch.isnan(matrix).any(), 'pair wise ious exist nan'
 
 class YOLOXHead(nn.Module):
@@ -299,7 +299,7 @@ class YOLOXHead(nn.Module):
             else:
                 gt_bboxes_per_image = labels[batch_idx, :num_gt, 1:5]
                 gt_classes = labels[batch_idx, :num_gt, 0]
-                isNAN_inTensor(bbox_preds[batch_idx])
+                isNan_inTensor(bbox_preds[batch_idx])
                 bboxes_preds_per_image = bbox_preds[batch_idx]
 
                 try:
@@ -475,7 +475,7 @@ class YOLOXHead(nn.Module):
         if mode == "cpu":
             gt_bboxes_per_image = gt_bboxes_per_image.cpu()
             bboxes_preds_per_image = bboxes_preds_per_image.cpu()
-
+        # 计算iou出现问题
         pair_wise_ious = bboxes_iou(gt_bboxes_per_image, bboxes_preds_per_image, False)
 
         gt_cls_per_image = (
@@ -616,7 +616,7 @@ class YOLOXHead(nn.Module):
         # Dynamic K
         # ---------------------------------------------------------------
         matching_matrix = torch.zeros_like(cost, dtype=torch.uint8)
-        isNAN_inTensor(pair_wise_ious)
+        isNan_inTensor(pair_wise_ious)
         ious_in_boxes_matrix = pair_wise_ious
         n_candidate_k = min(10, ious_in_boxes_matrix.size(1))
         topk_ious, _ = torch.topk(ious_in_boxes_matrix, n_candidate_k, dim=1)
