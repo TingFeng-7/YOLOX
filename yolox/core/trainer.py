@@ -337,8 +337,8 @@ class Trainer:
             )
 
         #tianxin: 改用ap50算best
-        update_best_ckpt = ap50 > self.best_ap
-        self.best_ap = max(self.best_ap, ap50)
+        # update_best_ckpt = ap50 > self.best_ap
+        # self.best_ap = max(self.best_ap, ap50)
         #ori ap50_95
         update_best_ckpt = ap50_95 > self.best_ap
         self.best_ap = max(self.best_ap, ap50_95)
@@ -356,7 +356,7 @@ class Trainer:
                 self.wandb_logger.log_images(predictions)
             logger.info("\n" + summary)
         synchronize()
-        # save
+        #ori ap50_95
         self.save_ckpt("last_epoch", update_best_ckpt, ap=ap50_95)
         if self.save_history_ckpt:
             self.save_ckpt(f"epoch_{self.epoch + 1}", ap=ap50_95)
